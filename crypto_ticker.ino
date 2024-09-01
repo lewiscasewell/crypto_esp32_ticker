@@ -5,16 +5,12 @@
 #include <cstring>
 #include "config.h"
 
-// Array of cryptocurrency symbols
 const char *cryptoSymbols[] = {"BTC", "ETH", "SOL", "AVAX", "DOT", "ADA", "DOGE"};
 const int numCryptos = sizeof(cryptoSymbols) / sizeof(cryptoSymbols[0]);
-
-// Fiat currency symbol (e.g., "GBP" or "USD")
+// GBP or USD supported
 const char *FIAT_SYMBOL = "USD";
 
-// LCD and Button Configurations
-#define POUND_CHAR 0
-#define BTC_CHAR 1
+#define POUND_CHAR
 #define EMPTY_SQUARE_CHAR 2
 #define FILLED_SQUARE_CHAR 3
 #define EMPTY_SQUARE_BOTTOM_FILLED_CHAR 4
@@ -25,28 +21,17 @@ const char *FIAT_SYMBOL = "USD";
 
 LiquidCrystal lcd(13, 12, 25, 26, 27, 14); // RS, E, D4, D5, D6, D7
 
-bool buttonPressed = false;   // Variable to keep track of button state
-bool isTickerRunning = false; // Flag to indicate if the ticker has started
-int currentCryptoIndex = 0;   // Start with the first cryptocurrency (BTC)
+bool buttonPressed = false;
+bool isTickerRunning = false;
+int currentCryptoIndex = 0;
 
-unsigned long previousMillis = 0;        // Stores the last time API was polled
-unsigned long countdownMillis = 0;       // Stores the last time the countdown was updated
-const long pollInterval = 5000;          // Interval at which to poll the API (5 seconds)
-const long countdownInterval = 1000;     // Interval at which to update countdown (1 second)
-const long cryptoSwitchInterval = 25000; // Interval at which to switch cryptocurrency (25 seconds)
-int countdownProgress = 0;               // Tracks progress of 5-second countdown
-int currentIntervalStep = 0;             // Tracks the number of 5-second intervals (0 to 4)
-
-byte btcChar[8] = {
-    0b01010,
-    0b11111,
-    0b01001,
-    0b01111,
-    0b01001,
-    0b11111,
-    0b01010,
-    0b00000,
-};
+unsigned long previousMillis = 0;        // last time API was polled
+unsigned long countdownMillis = 0;       // last time the countdown was updated
+const long pollInterval = 5000;          // poll api
+const long countdownInterval = 1000;     // interval for loading stepper
+const long cryptoSwitchInterval = 25000; // interval to switch crypto, move to next
+int countdownProgress = 0;               // progress of 5-second countdown
+int currentIntervalStep = 0;             // the number of 5-second intervals (0 to 4)
 
 byte poundChar[8] = {
     0b00111,
@@ -59,7 +44,6 @@ byte poundChar[8] = {
     0b00000,
 };
 
-// Custom characters for visual countdown
 byte emptySquare[8] = {
     0b11111,
     0b10001,
@@ -82,7 +66,7 @@ byte filledSquare[8] = {
     0b00000,
 };
 
-byte emptySquareBottomFilled[8] = {
+byte emptySquareBottomUnderlined[8] = {
     0b11111,
     0b10001,
     0b10001,
@@ -93,7 +77,7 @@ byte emptySquareBottomFilled[8] = {
     0b11111,
 };
 
-byte filledSquareBottomFilled[8] = {
+byte filledSquareBottomUnderlined[8] = {
     0b11111,
     0b11111,
     0b11111,
@@ -106,11 +90,10 @@ byte filledSquareBottomFilled[8] = {
 
 void setup()
 {
-  Serial.begin(115200); // 115200 baud rate
+  Serial.begin(115200); // baud rate
 
   lcd.begin(X_CELLS, Y_CELLS);
   lcd.createChar(POUND_CHAR, poundChar);
-  lcd.createChar(BTC_CHAR, btcChar);
   lcd.createChar(EMPTY_SQUARE_CHAR, emptySquare);
   lcd.createChar(FILLED_SQUARE_CHAR, filledSquare);
   lcd.createChar(EMPTY_SQUARE_BOTTOM_FILLED_CHAR, emptySquareBottomFilled);
@@ -118,9 +101,8 @@ void setup()
 
   pinMode(BUTTON_PIN, INPUT_PULLUP);
 
-  // Display initial "Ready" message
   lcd.setCursor(0, 0);
-  lcd.print("Ready!");
+  lcd.print("Setting up...");
 
   // Connect to Wi-Fi
   WiFi.begin(ssid, password);
@@ -128,7 +110,7 @@ void setup()
   {
     delay(500);
     Serial.print(".");
-    lcd.setCursor(0, 1); // Move the cursor to the second row
+    lcd.setCursor(0, 1);
     lcd.print("Connecting...");
   }
   Serial.println("\nWiFi connected.");
@@ -143,7 +125,7 @@ void loop()
 {
   unsigned long currentMillis = millis();
 
-  // Check if the button is pressed
+  // button is pressed
   if (digitalRead(BUTTON_PIN) == LOW)
   {
     if (!buttonPressed)
@@ -153,7 +135,6 @@ void loop()
 
       if (!isTickerRunning)
       {
-        // Start ticker mode
         isTickerRunning = true;
         lcd.clear();
         lcd.setCursor(0, 0);
@@ -171,29 +152,20 @@ void loop()
 
   if (isTickerRunning)
   {
-    // Check if it's time to poll the API
     if (currentMillis - previousMillis >= pollInterval)
     {
       previousMillis = currentMillis;
-      pollAPI(); // Poll the API every 5 seconds
-
-      // After each poll, reset the countdown progress
+      pollAPI();
       countdownProgress = 0;
-      currentIntervalStep++; // Increment the interval step
-
-      // Update the visual countdown for 5-second intervals
+      currentIntervalStep++;
       updateVisualCountdown();
     }
-
-    // Check if it's time to update the countdown
     if (currentMillis - countdownMillis >= countdownInterval)
     {
       countdownMillis = currentMillis;
       countdownProgress++;
-      updateVisualCountdown(); // Update the visual countdown
+      updateVisualCountdown();
     }
-
-    // Check if it's time to switch the cryptocurrency
     if (currentIntervalStep >= (cryptoSwitchInterval / pollInterval))
     {
       currentIntervalStep = 0;
@@ -202,11 +174,11 @@ void loop()
       currentCryptoIndex = (currentCryptoIndex + 1) % numCryptos;
       lcd.setCursor(0, 0);
       lcd.print(cryptoSymbols[currentCryptoIndex]);
-      pollAPI(); // Immediately fetch and display the new price
+      pollAPI();
     }
   }
 
-  // Short delay to prevent a busy-wait loop
+  // delay to prevent a busy-wait loop
   delay(100);
 }
 
@@ -215,29 +187,20 @@ void pollAPI()
   if (WiFi.status() == WL_CONNECTED)
   {
     HTTPClient http;
-
-    // Dynamically construct the API URL for the selected cryptocurrency and FIAT symbol
     String serverName = "https://api.pro.coinbase.com/products/";
     serverName += cryptoSymbols[currentCryptoIndex];
     serverName += "-";
     serverName += FIAT_SYMBOL;
     serverName += "/ticker";
-
     http.begin(serverName);
 
-    // Send the GET request
     int httpResponseCode = http.GET();
-
-    // Check the response code
     if (httpResponseCode > 0)
     {
       String payload = http.getString();
       Serial.println(httpResponseCode);
       Serial.println(payload);
-
-      // Parse JSON
-      StaticJsonDocument<200> doc; // Adjust the size based on your JSON structure
-
+      StaticJsonDocument<200> doc;
       DeserializationError error = deserializeJson(doc, payload);
 
       if (error)
@@ -250,8 +213,7 @@ void pollAPI()
         return;
       }
 
-      // Extract the price value
-      float price = doc["price"]; // Assuming the API returns a JSON object with a "price" key
+      float price = doc["price"];
 
       Serial.print(cryptoSymbols[currentCryptoIndex]);
       Serial.print("/");
@@ -259,7 +221,6 @@ void pollAPI()
       Serial.print(" Price: ");
       Serial.println(price);
 
-      // Display the price on the LCD
       lcd.clear();
       lcd.setCursor(0, 0);
       lcd.print(cryptoSymbols[currentCryptoIndex]);
@@ -269,11 +230,11 @@ void pollAPI()
       lcd.setCursor(0, 1);
       if (strcmp(FIAT_SYMBOL, "GBP") == 0)
       {
-        lcd.write(byte(POUND_CHAR)); // Display custom Pound character
+        lcd.write(byte(POUND_CHAR));
       }
       else
       {
-        lcd.print("$"); // Display Dollar sign
+        lcd.print("$");
       }
       lcd.print(price);
     }
@@ -289,7 +250,6 @@ void pollAPI()
       lcd.print(httpResponseCode);
     }
 
-    // Free resources
     http.end();
   }
   else
