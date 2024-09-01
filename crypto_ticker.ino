@@ -4,17 +4,20 @@
 #include <ArduinoJson.h>
 #include <cstring>
 #include "config.h"
+#include "custom_chars.h"
+
+#pragma region constants
 
 const char *cryptoSymbols[] = {"BTC", "ETH", "SOL", "AVAX", "DOT", "ADA", "DOGE"};
 const int numCryptos = sizeof(cryptoSymbols) / sizeof(cryptoSymbols[0]);
 // GBP or USD supported
 const char *FIAT_SYMBOL = "USD";
 
-#define POUND_CHAR
+#define POUND_CHAR 1
 #define EMPTY_SQUARE_CHAR 2
 #define FILLED_SQUARE_CHAR 3
-#define EMPTY_SQUARE_BOTTOM_FILLED_CHAR 4
-#define FILLED_SQUARE_BOTTOM_FILLED_CHAR 5
+#define EMPTY_SQUARE_BOTTOM_UNDERLINED_CHAR 4
+#define FILLED_SQUARE_BOTTOM_UNDERLINED_CHAR 5
 #define BUTTON_PIN 33
 #define X_CELLS 16
 #define Y_CELLS 2
@@ -33,60 +36,7 @@ const long cryptoSwitchInterval = 25000; // interval to switch crypto, move to n
 int countdownProgress = 0;               // progress of 5-second countdown
 int currentIntervalStep = 0;             // the number of 5-second intervals (0 to 4)
 
-byte poundChar[8] = {
-    0b00111,
-    0b01100,
-    0b01000,
-    0b11110,
-    0b01000,
-    0b01000,
-    0b11111,
-    0b00000,
-};
-
-byte emptySquare[8] = {
-    0b11111,
-    0b10001,
-    0b10001,
-    0b10001,
-    0b10001,
-    0b11111,
-    0b00000,
-    0b00000,
-};
-
-byte filledSquare[8] = {
-    0b11111,
-    0b11111,
-    0b11111,
-    0b11111,
-    0b11111,
-    0b11111,
-    0b00000,
-    0b00000,
-};
-
-byte emptySquareBottomUnderlined[8] = {
-    0b11111,
-    0b10001,
-    0b10001,
-    0b10001,
-    0b10001,
-    0b11111,
-    0b00000,
-    0b11111,
-};
-
-byte filledSquareBottomUnderlined[8] = {
-    0b11111,
-    0b11111,
-    0b11111,
-    0b11111,
-    0b11111,
-    0b11111,
-    0b00000,
-    0b11111,
-};
+#pragma region setup
 
 void setup()
 {
@@ -96,8 +46,8 @@ void setup()
   lcd.createChar(POUND_CHAR, poundChar);
   lcd.createChar(EMPTY_SQUARE_CHAR, emptySquare);
   lcd.createChar(FILLED_SQUARE_CHAR, filledSquare);
-  lcd.createChar(EMPTY_SQUARE_BOTTOM_FILLED_CHAR, emptySquareBottomFilled);
-  lcd.createChar(FILLED_SQUARE_BOTTOM_FILLED_CHAR, filledSquareBottomFilled);
+  lcd.createChar(EMPTY_SQUARE_BOTTOM_UNDERLINED_CHAR, emptySquareBottomUnderlined);
+  lcd.createChar(FILLED_SQUARE_BOTTOM_UNDERLINED_CHAR, filledSquareBottomUnderlined);
 
   pinMode(BUTTON_PIN, INPUT_PULLUP);
 
@@ -120,6 +70,8 @@ void setup()
   lcd.setCursor(0, 1);
   lcd.print("to start tracker");
 }
+
+#pragma region main loop
 
 void loop()
 {
@@ -181,6 +133,8 @@ void loop()
   // delay to prevent a busy-wait loop
   delay(100);
 }
+
+#pragma region polling api func
 
 void pollAPI()
 {
@@ -261,6 +215,8 @@ void pollAPI()
   }
 }
 
+#pragma region LCD countdown
+
 void updateVisualCountdown()
 {
   // Iterate over the last 5 cells of the LCD
@@ -274,7 +230,7 @@ void updateVisualCountdown()
       if (i < currentIntervalStep)
       {
         // If the 5-second block has passed for this cell and it needs an underline
-        lcd.write(byte(FILLED_SQUARE_BOTTOM_FILLED_CHAR)); // Filled with underline
+        lcd.write(byte(FILLED_SQUARE_BOTTOM_UNDERLINED_CHAR)); // Filled with underline
       }
       else
       {
@@ -288,7 +244,7 @@ void updateVisualCountdown()
       if (i < currentIntervalStep)
       {
         // If the 5-second block has passed but within the 25-second interval
-        lcd.write(byte(EMPTY_SQUARE_BOTTOM_FILLED_CHAR)); // Empty with underline
+        lcd.write(byte(EMPTY_SQUARE_BOTTOM_UNDERLINED_CHAR)); // Empty with underline
       }
       else
       {
